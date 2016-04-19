@@ -1,0 +1,120 @@
+#include <stdio.h>
+
+#define SIZE 10 
+#define BLOCKS 1
+#define THREADS_PER_BLOCK 5
+
+__global__ void OddEvensort(int *in, int size) {
+
+	bool oddeven = true;
+	__shared__ bool swappedodd;
+	__shared__ bool swappedeven;
+
+	int temp;
+	swappedodd  = true;
+	swappedeven = true;
+	
+	while (true) {
+
+		if (oddeven == true) {
+			//printf("\n Swapping at ODD locations.\n");
+			__syncthreads();
+			swappedodd = false;
+			__syncthreads();
+			
+			int idx = threadIdx.x + blockIdx.x * blockDim.x;
+			
+			if (idx<(size / 2)) {
+					
+				if (in[2 * idx]>in[2 * idx + 1]) {
+					printf("\nThread Id %d : is swapping %d <-> %d \
+					\nThread Id %d : [%d] <-> [%d]\n", idx, in[2 * idx], \
+					in[2 * idx + 1], idx, 2 * idx, (2 * idx + 1));
+					// swap the numbers at odd location (in[2*idx],in[2*idx+1]);
+					temp = in[2 * idx];
+					in[2 * idx] = in[2 * idx + 1];
+					in[2 * idx + 1] = temp;
+					swappedodd = true;
+				}
+			}
+			
+			__syncthreads();
+		
+		} else {
+			//printf("\n Swapping at Even locations.\n");
+			__syncthreads();
+			swappedeven = false;
+			__syncthreads();
+
+			int idx = threadIdx.x + blockIdx.x * blockDim.x;
+			if (idx<(size / 2) - 1) {
+					
+				if (in[2 * idx + 1] > in[2 * idx + 2]) {
+					printf("\nThread Id %d : is swapping %d <-> %d\
+					\nThread Id %d : [%d] <-> [%d]\n\
+					", idx, in[2 * idx + 1], in[2 * idx + 2], idx, \
+					(2 * idx + 1), (2 * idx + 2));
+					//  swap(in[2*idx+1],in[2*idx+2]);
+					temp = in[2 * idx + 1];
+					in[2 * idx + 1] = in[2 * idx + 2];
+					in[2 * idx + 2] = temp;
+					swappedeven = true;
+				}
+			}
+			
+			__syncthreads();
+
+		}
+
+		if (!(swappedodd || swappedeven))
+			break;
+
+		oddeven = !oddeven;
+
+	}
+
+	__syncthreads();
+	
+}
+
+
+int main(void)
+{
+	int *a, *a_sorted, i;
+	int *d_a;
+	int size = sizeof(int)*SIZE;
+
+	cudaMalloc((void**)&d_a, size);
+
+	a = (int*)malloc(size);
+	a_sorted = (int*)malloc(size);
+
+	printf("\nEnter %d numbers to sort:\n", SIZE);
+	for (i = 0; i< SIZE; i++) {
+		scanf("%d", &a[i]);
+	}
+
+	printf("\nUnsorted array is:\n");
+	for (i = 0; i < SIZE; i++) {
+		printf("%d ", a[i]);
+	}
+
+	cudaMemcpy(d_a, a, size, cudaMemcpyHostToDevice);
+
+		OddEvensort<<<BLOCKS, THREADS_PER_BLOCK>>>(d_a, SIZE);
+
+	cudaMemcpy(a_sorted, d_a, size, cudaMemcpyDeviceToHost);
+	
+	printf("\nSorted array is:\n");
+	for (i = 0; i<SIZE; i++) {
+		printf("%d ", a_sorted[i]);
+	}
+	
+	printf("\nA Lannister always pays his Debts!!\n");
+
+	free(a);
+	free(a_sorted);
+	cudaFree(d_a);
+	
+	return 0;
+}
