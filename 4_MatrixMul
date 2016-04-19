@@ -24,7 +24,7 @@ int main()
 {
 	// Perform matrix multiplication C = A*B
 	// where A, B and C are NxN matrices
-	// Restricted to matrices where N = GRID_SIZE*BLOCGRID_SIZE_SIZE;
+	// Restricted to matrices where N = GRID_SIZE * BLOCK_SIZE;
 	float *hA, *hB, *hC;
 	float *dA, *dB, *dC;
 	int size = N * N * sizeof(float);
@@ -65,8 +65,9 @@ int main()
 	cudaMalloc(&dB, size);
 	cudaMalloc(&dC, size);
 
-	dim3 threadBlock(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 grid(GRID_SIZE, GRID_SIZE);
+	// Specify launch config. 
+	dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
+	dim3 blocksPerGrid(GRID_SIZE, GRID_SIZE);
 
 	// Copy matrices from the host to device
 	cudaMemcpy(dA, hA, size, cudaMemcpyHostToDevice);
@@ -74,7 +75,7 @@ int main()
 
 	//Execute the matrix multiplication kernel
 	printf("\n Launching Gird of size ( %dx%d ) with Blocks of size (%d x %d)\n", GRID_SIZE, GRID_SIZE, BLOCK_SIZE, BLOCK_SIZE);
-	MatrixMul <<<grid, threadBlock >>>(dA, dB, dC, N);
+	MatrixMul <<<blocksPerGrid, threadsPerBlock >>>(dA, dB, dC, N);
 
 	// Now copy the GPU result back to CPU
 	cudaMemcpy(hC, dC, size, cudaMemcpyDeviceToHost);
